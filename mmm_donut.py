@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -52,15 +52,12 @@ Examples:
          mmm_donut --free_swap=500 --munch_mbs=20 --taste=70 --chew=90
 """
 
-
-from __future__ import print_function
-
 import argparse
 import ctypes
 import multiprocessing
 import numpy
 import os
-import Queue
+import queue
 import subprocess
 import sys
 import time
@@ -80,7 +77,7 @@ _KB = 1024
 _MB = _KB * _KB
 
 # For the purpose of this program, a 'word' is 32-bits.
-_WORDS_PER_MB = _MB / 4
+_WORDS_PER_MB = _MB // 4
 
 _PAGESIZE = os.sysconf('SC_PAGESIZE')
 
@@ -125,7 +122,7 @@ class _MemoryMuncher(object):
             proto_data = numpy.memmap(_DEFAULT_FILE_TO_MAP,
                                       dtype='uint32', mode='r')
         self._proto_data = proto_data
-        self._num_proto_mbs = len(self._proto_data) / _WORDS_PER_MB
+        self._num_proto_mbs = len(self._proto_data) // _WORDS_PER_MB
         self._at_proto_mb = 0
 
         # Every time we munch through a chunk we'll add this to each integer to
@@ -173,7 +170,7 @@ class _MemoryMuncher(object):
                 the proto data; we'll just put a unique value in the first
                 word of the page.
         """
-        for _ in xrange(mbs_to_munch):
+        for _ in range(mbs_to_munch):
             # Allocate some memory using libc; give back a numpy object
             mb = self._alloc_array(_WORDS_PER_MB, ctypes.c_uint32)
 
@@ -207,7 +204,7 @@ class _MemoryMuncher(object):
         Args:
             mbs_to_spit: Number of MBs to spit.
         """
-        for _ in xrange(mbs_to_spit):
+        for _ in range(mbs_to_spit):
             if not self._mbs:
                 raise RuntimeError('No more memory to spit out')
             self._free_array(self._mbs.pop(0))
@@ -222,7 +219,7 @@ class _MemoryMuncher(object):
             raise RuntimeError('No memory')
 
         mb_num = self._last_accessed_mb
-        for mb_num in xrange(mb_num + 1, mb_num + 1 + mbs_to_taste):
+        for mb_num in range(mb_num + 1, mb_num + 1 + mbs_to_taste):
             mb_num %= len(self._mbs)
             mb = self._mbs[mb_num]
             self.num_mbs_tasted += 1
@@ -240,7 +237,7 @@ class _MemoryMuncher(object):
             raise RuntimeError('No memory')
 
         mb_num = self._last_accessed_mb
-        for mb_num in xrange(mb_num + 1, mb_num + 1 + mbs_to_chew):
+        for mb_num in range(mb_num + 1, mb_num + 1 + mbs_to_chew):
             mb_num %= len(self._mbs)
             mb = self._mbs[mb_num]
             self.num_mbs_chewed += 1
@@ -363,7 +360,7 @@ def _wait_everyone_done(tasks, done_queue, refill_done_queue=True):
         try:
             task_num = done_queue.get(timeout=.5)
             done_tasks.add(task_num)
-        except Queue.Empty:
+        except queue.Empty:
             for task_num, task in enumerate(tasks):
                 if not task.is_alive():
                     raise WorkerDeadError(task_num)
@@ -373,7 +370,7 @@ def _wait_everyone_done(tasks, done_queue, refill_done_queue=True):
         return
 
     # Add everyone back to the done_queue.
-    for task_num in xrange(num_tasks):
+    for task_num in range(num_tasks):
         done_queue.put(task_num)
 
 
@@ -398,7 +395,7 @@ def _end_stage(old_stage_name, tasks, done_queue, cmd_queues):
     time.sleep(1)
 
     # We'll throw an extra status update; this will refill the done_queue
-    for task_num in xrange(num_tasks):
+    for task_num in range(num_tasks):
         assert cmd_queues[task_num].empty()
         cmd_queues[task_num].put('status')
     _wait_everyone_done(tasks, done_queue)
@@ -472,19 +469,19 @@ def main(args):
     num_tasks = options.num_tasks
 
     done_queue = multiprocessing.Queue()
-    cmd_queues = [multiprocessing.Queue() for task_num in xrange(num_tasks)]
+    cmd_queues = [multiprocessing.Queue() for task_num in range(num_tasks)]
     tasks = [
         multiprocessing.Process(
             target=_thread_main,
             args=(task_num, options, cmd_queues[task_num], done_queue)
         )
-        for task_num in xrange(num_tasks)
+        for task_num in range(num_tasks)
     ]
     for task in tasks:
         task.start()
 
     print('Starting test.')
-    for task_num in xrange(num_tasks):
+    for task_num in range(num_tasks):
         cmd_queues[task_num].put('status')
     _wait_everyone_done(tasks, done_queue)
 
