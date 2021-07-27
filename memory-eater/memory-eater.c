@@ -82,13 +82,14 @@ void measure_zram_throughput(char *buf, size_t bytes, size_t num_pages,
   pid_t childpid;
   int receiver, sender;
   char sync;
-  int r;
 
   // For the child process, manage the pipes and let the child process to start
   // accessing pages.
   if (do_fork) {
-    r = pipe(fd1);
-    r = pipe(fd2);
+    if (pipe(fd1) || pipe(fd2)) {
+      perror("pipe failure");
+      exit(1);
+    }
 
     if ((childpid = fork()) == -1) {
       perror("fork failure");
@@ -109,7 +110,10 @@ void measure_zram_throughput(char *buf, size_t bytes, size_t num_pages,
       sender = fd2[1];
       receiver = fd1[0];
       // Let the child process to fetch pages first
-      r = write(sender, IPC_GOAHEAD, 1);
+      if (write(sender, IPC_GOAHEAD, 1) == -1) {
+        perror("write failure");
+        exit(1);
+      }
     }
 
     // Dirty the pages again to trigger copy-on-write so that we have enough
@@ -131,7 +135,10 @@ void measure_zram_throughput(char *buf, size_t bytes, size_t num_pages,
   while (total_pages != 0) {
     // Synchronize parent and child page accesses
     if (need_to_sync) {
-      r = read(receiver, &sync, 1);
+      if (read(receiver, &sync, 1) == -1) {
+        perror("read failure");
+        exit(1);
+      }
       // The other process is done - no need to wait anymore.
       if (sync == IPC_DONE_C)
         need_to_sync = false;
@@ -148,10 +155,15 @@ void measure_zram_throughput(char *buf, size_t bytes, size_t num_pages,
 
     // Let the other process proceed
     if (need_to_sync) {
+      int r;
       if (total_pages)
         r = write(sender, IPC_GOAHEAD, 1);
       else
         r = write(sender, IPC_DONE, 1);
+      if (r == -1) {
+        perror("write failure");
+        exit(1);
+      }
     }
   }
 
