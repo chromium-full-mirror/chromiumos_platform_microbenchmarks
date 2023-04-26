@@ -498,6 +498,11 @@ def main(args):
                 continue
             task_num = done_queue.get()
             cmd_queues[task_num].put('munch')
+
+            for task_num, task in enumerate(tasks):
+                if not task.is_alive():
+                    raise WorkerDeadError(task_num)
+
         _end_stage('munch', tasks, done_queue, cmd_queues)
 
         print('Tasting for %d seconds; taste %d MB at a time.' %
