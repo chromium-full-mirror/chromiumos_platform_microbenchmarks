@@ -210,7 +210,7 @@ class _MemoryMuncher(object):
             self._free_array(self._mbs.pop(0))
 
     def taste(self, mbs_to_taste):
-        """Access memory that we've chewed through, reading 1 word per page.
+        """Access memory that we've munched through, reading 1 word per page.
 
         Args:
             mbs_to_taste: Number of MBs that we'd like to try to access
@@ -228,7 +228,7 @@ class _MemoryMuncher(object):
         self._last_accessed_mb = mb_num
 
     def chew(self, mbs_to_chew):
-        """Modify memory that we've chewed through, tweaking 1 word per page.
+        """Modify memory that we've munched through, tweaking 1 word per page.
 
         Args:
             mbs_to_chew: Number of MBs that we'd like to try to access
@@ -313,9 +313,9 @@ def _thread_main(task_num, options, cmd_queue, done_queue):
             elif cmd == 'munch':
                 muncher.munch(munch_mbs)
             elif cmd == 'taste':
-                muncher.taste(chew_mbs)
+                muncher.taste(taste_mbs)
             elif cmd == 'chew':
-                muncher.chew(taste_mbs)
+                muncher.chew(chew_mbs)
 
             done_queue.put(task_num)
     except KeyboardInterrupt:
