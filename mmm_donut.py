@@ -433,6 +433,16 @@ def _parse_options(args):
         '(default: %(default)s)'
     )
     parser.add_argument(
+        '-f', '--free_total', type=int, required=False,
+        help='Stop munching when free memory <= this many MB ' +
+        '(default: disabled)'
+    )
+    parser.add_argument(
+        '-a', '--available', type=int, required=False,
+        help='Stop munching when available memory <= this many MB ' +
+        '(default: disabled)'
+    )
+    parser.add_argument(
         '-t', '--taste', type=int, default=30,
         help='Taste for this many seconds (default: %(default)s)'
     )
@@ -486,11 +496,19 @@ def main(args):
     _wait_everyone_done(tasks, done_queue)
 
     try:
-        print('Munching till swap < %d MB free; munch %d MB at a time.' %
-              (options.free_swap, options.munch_mbs))
+        print("Munching till one of these is met:")
+        print("- swap < %d MB free" % options.free_swap)
+        if options.free_total is not None:
+            print("- total memory < %d MB free" % options.free_total)
+        if options.available is not None:
+            print("- available memory < %d MB" % options.available)
         while True:
             meminfo = _MemInfo()
             if meminfo.SwapFree < options.free_swap * _MB:
+                break
+            if options.free_total is not None and meminfo.MemFree < options.free_total * _MB:
+                break
+            if options.available is not None and meminfo.MemAvailable < options.available * _MB:
                 break
             if meminfo.MemFree < options.memfree_sleep * _MB:
                 print('MemFree only %d MB; sleeping' % (meminfo.MemFree / _MB))
